@@ -1,11 +1,11 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// middleware
 app.use(cors());
 app.use(express.json());
 
@@ -28,6 +28,15 @@ async function run() {
     const serviceCollection = client.db("carDoctor").collection("services");
     const bookingCollection = client.db("carDoctor").collection("booking");
 
+    // auth related apis
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, "secret", { expiresIn: "1h" });
+      res.send(token);
+    });
+
+    // services related apis
     app.get("/services", async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
@@ -50,6 +59,7 @@ async function run() {
 
     app.get("/bookings", async (req, res) => {
       console.log(req.query.email);
+      console.log("token", req.cookies);
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
@@ -68,7 +78,7 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedBookings = req.body;
-      console.log(updatedBookings);
+      // console.log(updatedBookings);
       const updatedDoc = {
         $set: {
           status: updatedBookings.status,
