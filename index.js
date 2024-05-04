@@ -28,6 +28,31 @@ const client = new MongoClient(uri, {
   },
 });
 
+// my middleware
+const logger = async (req, res, next) => {
+  console.log("called:", req.host, req.originalUrl);
+  next();
+};
+
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log("value of token is middleware", token);
+  if (!token) {
+    return res.status(401).send({ message: "Not authorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    // error
+    if (error) {
+      console.log(error);
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    // decoded
+    console.log("value in the token", decoded);
+    req.user = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -37,7 +62,7 @@ async function run() {
     const bookingCollection = client.db("carDoctor").collection("booking");
 
     // auth related apis
-    app.post("/jwt", async (req, res) => {
+    app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -53,13 +78,13 @@ async function run() {
     });
 
     // services related apis
-    app.get("/services", async (req, res) => {
+    app.get("/services", logger, async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
-    app.get("/services/:id", async (req, res) => {
+    app.get("/services/:id", logger, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
 
@@ -72,9 +97,10 @@ async function run() {
     });
 
     // booking related APIs
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", logger, verifyToken, async (req, res) => {
       // console.log(req.query.email);
-      console.log("cookies token:", req.cookies);
+      // console.log("cookies token:", req.cookies);
+      console.log("user in the valid token", req.user);
 
       let query = {};
       if (req.query?.email) {
@@ -84,13 +110,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/bookings", async (req, res) => {
+    app.post("/bookings", logger, async (req, res) => {
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    app.patch("/bookings/:id", async (req, res) => {
+    app.patch("/bookings/:id", logger, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedBookings = req.body;
@@ -104,7 +130,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/bookings/:id", async (req, res) => {
+    app.delete("/bookings/:id", logger, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bookingCollection.deleteOne(query);
