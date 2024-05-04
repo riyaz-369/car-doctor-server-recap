@@ -7,7 +7,7 @@
 /**
  * how to store token in the client side
  * 1. memory --> ok type
- * 2. local storage --> ok type (XSS)
+ * 2. local storage --> ok type (XSS) cross site scripting
  * 3. cookies: http only
  */
 
