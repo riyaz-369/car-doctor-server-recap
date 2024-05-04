@@ -101,6 +101,9 @@ async function run() {
       // console.log(req.query.email);
       // console.log("cookies token:", req.cookies);
       console.log("user in the valid token", req.user);
+      if (req.query.email !== req.user.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
 
       let query = {};
       if (req.query?.email) {
