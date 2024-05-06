@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -14,6 +15,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.308otot.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -25,6 +27,18 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+// middlewares
+const logger = (req, res, next) => {
+  console.log("log: info", req.method, req.url);
+  next();
+};
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  console.log("token in the middleware", token);
+  next();
+};
 
 async function run() {
   try {
@@ -76,7 +90,8 @@ async function run() {
     });
 
     // booking related APIs
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", logger, verifyToken, async (req, res) => {
+      // console.log("cookies", req.cookies);
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
